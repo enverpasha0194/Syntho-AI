@@ -4,8 +4,9 @@ import requests
 # =========================
 # API AYARLARI
 # =========================
-SD_API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
-TR_EN_API_URL = "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-tr-en"
+SD_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
+TR_EN_API_URL = "https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-tr-en"
+
 
 HEADERS = {
     "Authorization": f"Bearer {st.secrets['HF_API_KEY']}"
