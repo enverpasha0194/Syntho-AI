@@ -14,13 +14,27 @@ HEADERS = {
 # =========================
 # TÜRKÇE → İNGİLİZCE ÇEVİRİ
 # =========================
+import time
+
 def translate_tr_to_en(text):
     payload = {"inputs": text}
-    response = requests.post(TR_EN_API_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()
 
-    result = response.json()
-    return result[0]["translation_text"]
+    for attempt in range(3):
+        response = requests.post(TR_EN_API_URL, headers=HEADERS, json=payload)
+
+        # Model yükleniyorsa bekle ve tekrar dene
+        if response.status_code == 503:
+            time.sleep(3)
+            continue
+
+        # Başarılıysa çeviriyi al
+        if response.status_code == 200:
+            result = response.json()
+            return result[0]["translation_text"]
+
+    # FALLBACK: çeviri çalışmazsa İngilizce varsay
+    return text
+
 
 # =========================
 # PROMPT MOTORU (Syntho AI ZEKA)
@@ -47,7 +61,7 @@ def generate_image(prompt):
 # =========================
 st.set_page_config(page_title="Syntho AI", layout="centered")
 st.title("🧬 Syntho AI — Realistic Image Engine")
-st.caption("Türkçe yaz → İngilizce düşün → Gerçekçi üret")
+st.caption("Gerçekçiliğin ötesi!")
 
 user_prompt = st.text_input(
     "Ne üretelim? (Türkçe yazabilirsin)",
