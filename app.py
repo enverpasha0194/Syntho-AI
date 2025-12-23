@@ -5,7 +5,8 @@ import time
 # =========================
 # API URL'LERİ (YENİ ROUTER)
 # =========================
-SD_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
+SD_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-2-1"
+
 TR_EN_API_URL = "https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-tr-en"
 
 HEADERS = {
