@@ -1,171 +1,64 @@
 import streamlit as st
-from PIL import Image, ImageDraw
-import random
-from io import BytesIO
+import requests
 
 # =========================
-# CANVAS AYARLARI
+# API AYARLARI
 # =========================
-WIDTH, HEIGHT = 800, 600
-BACKGROUND = (230, 240, 255)
+SD_API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+TR_EN_API_URL = "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-tr-en"
 
-# =========================
-# PROMPT → PARAMETRE MOTORU
-# =========================
-def prompt_to_params(prompt: str):
-    p = prompt.lower()
-
-    # Varsayılan yaratık (bilinmeyen prompt)
-    params = {
-        "legs": 4,
-        "body_ratio": 1.5,
-        "spots": False,
-        "tail": True,
-        "color": (200, 200, 200)
-    }
-
-    if "inek" in p:
-        params.update({
-            "legs": 4,
-            "body_ratio": 1.8,
-            "spots": True,
-            "tail": True,
-            "color": (245, 245, 245)
-        })
-
-    if "kedi" in p:
-        params.update({
-            "legs": 4,
-            "body_ratio": 1.2,
-            "spots": False,
-            "tail": True,
-            "color": (210, 210, 210)
-        })
-
-    if "köpek" in p:
-        params.update({
-            "legs": 4,
-            "body_ratio": 1.4,
-            "spots": False,
-            "tail": True,
-            "color": (190, 190, 190)
-        })
-
-    if "balık" in p:
-        params.update({
-            "legs": 0,
-            "body_ratio": 2.5,
-            "spots": False,
-            "tail": True,
-            "color": (170, 210, 230)
-        })
-
-    if "ejderha" in p:
-        params.update({
-            "legs": 4,
-            "body_ratio": 2.2,
-            "spots": True,
-            "tail": True,
-            "color": (120, 180, 120)
-        })
-
-    return params
+HEADERS = {
+    "Authorization": f"Bearer {st.secrets['HF_API_KEY']}"
+}
 
 # =========================
-# BENEK ÜRETİCİ
+# TÜRKÇE → İNGİLİZCE ÇEVİRİ
 # =========================
-def generate_spots(draw, x, y, w, h):
-    for _ in range(8):
-        sx = random.randint(x, x + w)
-        sy = random.randint(y, y + h)
-        r = random.randint(10, 25)
-        draw.ellipse(
-            [sx - r, sy - r, sx + r, sy + r],
-            fill=(80, 80, 80)
-        )
+def translate_tr_to_en(text):
+    payload = {"inputs": text}
+    response = requests.post(TR_EN_API_URL, headers=HEADERS, json=payload)
+    response.raise_for_status()
+
+    result = response.json()
+    return result[0]["translation_text"]
 
 # =========================
-# ANA ÜRETİM MOTORU
+# PROMPT MOTORU (Syntho AI ZEKA)
 # =========================
-def generate_creature(params, seed=None):
-    if seed is None:
-        seed = random.randint(0, 999999)
-    random.seed(seed)
+def syntho_prompt(user_prompt_tr):
+    prompt_en = translate_tr_to_en(user_prompt_tr)
 
-    img = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
-    draw = ImageDraw.Draw(img)
+    base = "ultra realistic photo, high detail, sharp focus, natural lighting"
 
-    # Gövde
-    body_w = int(300 * params["body_ratio"])
-    body_h = 160
-    body_x = WIDTH // 2 - body_w // 2
-    body_y = HEIGHT // 2 - body_h // 2
+    final_prompt = f"{base}, {prompt_en}"
+    return final_prompt, prompt_en
 
-    draw.ellipse(
-        [body_x, body_y, body_x + body_w, body_y + body_h],
-        fill=params["color"],
-        outline=(0, 0, 0),
-        width=3
-    )
-
-    # Benek
-    if params["spots"]:
-        generate_spots(draw, body_x, body_y, body_w, body_h)
-
-    # Bacaklar
-    if params["legs"] > 0:
-        spacing = body_w // (params["legs"] + 1)
-        for i in range(params["legs"]):
-            lx = body_x + spacing * (i + 1)
-            ly = body_y + body_h
-            draw.rectangle(
-                [lx - 10, ly, lx + 10, ly + 80],
-                fill=(100, 100, 100)
-            )
-
-    # Kuyruk
-    if params["tail"]:
-        tx = body_x + body_w
-        ty = body_y + body_h // 2
-        draw.line(
-            [tx, ty, tx + 60, ty + 80],
-            fill=(120, 120, 120),
-            width=6
-        )
-
-    # Göz (basit ama karakter katar)
-    eye_x = body_x + body_w // 4
-    eye_y = body_y + body_h // 3
-    draw.ellipse(
-        [eye_x, eye_y, eye_x + 15, eye_y + 15],
-        fill=(0, 0, 0)
-    )
-
-    return img, seed
+# =========================
+# GÖRSEL ÜRETİM
+# =========================
+def generate_image(prompt):
+    payload = {"inputs": prompt}
+    response = requests.post(SD_API_URL, headers=HEADERS, json=payload)
+    response.raise_for_status()
+    return response.content
 
 # =========================
 # STREAMLIT UI
 # =========================
-st.set_page_config(page_title="Prompt Creature Engine", layout="centered")
-st.title("🧠 Prompt → Canlı Üretim Motoru")
-st.write("Ne yazarsan ona göre **sıfırdan** bir şey üretilir. Foto yok. Kopya yok.")
+st.set_page_config(page_title="Syntho AI", layout="centered")
+st.title("🧬 Syntho AI — Realistic Image Engine")
+st.caption("Türkçe yaz → İngilizce düşün → Gerçekçi üret")
 
-prompt = st.text_input(
-    "Ne çizelim?",
-    placeholder="örnek: inek, kedi, balık, ejderha"
+user_prompt = st.text_input(
+    "Ne üretelim? (Türkçe yazabilirsin)",
+    placeholder="örnek: gerçekçi balık, sisli dağ, kedi portresi"
 )
 
-if st.button("ÜRET") and prompt.strip() != "":
-    params = prompt_to_params(prompt)
-    img, seed = generate_creature(params)
+if st.button("ÜRET") and user_prompt.strip():
+    with st.spinner("Syntho AI düşünüyor..."):
+        final_prompt, translated = syntho_prompt(user_prompt)
+        img_bytes = generate_image(final_prompt)
 
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-
-    st.image(
-        buf.getvalue(),
-        caption=f"Prompt: {prompt} | Seed: {seed}",
-        use_container_width=True
-    )
-
-    st.code(params, language="python")
+        st.image(img_bytes, caption="Üretilen Görsel")
+        st.subheader("🔎 Kullanılan İngilizce Prompt")
+        st.code(final_prompt, language="text")
