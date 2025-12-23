@@ -3,11 +3,9 @@ import requests
 import time
 
 # =========================
-# API URL'LERİ (YENİ ROUTER)
+# API URL'LERİ (HF ROUTER)
 # =========================
 SD_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-2-1"
-st.write("TOKEN OK:", st.secrets["HF_API_KEY"][:6])
-
 TR_EN_API_URL = "https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-tr-en"
 
 HEADERS = {
@@ -56,11 +54,11 @@ def syntho_prompt(user_prompt_tr):
 # =========================
 def generate_image(prompt):
     payload = {
-    "inputs": prompt,
-    "options": {
-        "wait_for_model": True
+        "inputs": prompt,
+        "options": {
+            "wait_for_model": True
+        }
     }
-}
 
     for _ in range(5):
         response = requests.post(
@@ -88,7 +86,7 @@ def generate_image(prompt):
 # =========================
 st.set_page_config(page_title="Syntho AI", layout="centered")
 st.title("🧬 Syntho AI")
-st.caption("Resim Üretme Aracı!")
+st.caption("Türkçe yaz → İngilizce düşün → Görsel üret")
 
 user_prompt = st.text_input(
     "Ne üretelim?",
