@@ -15,25 +15,32 @@ HEADERS = {
 # TÜRKÇE → İNGİLİZCE ÇEVİRİ
 # =========================
 import time
+import time
 
-def translate_tr_to_en(text):
-    payload = {"inputs": text}
+def generate_image(prompt):
+    payload = {"inputs": prompt}
 
-    for attempt in range(3):
-        response = requests.post(TR_EN_API_URL, headers=HEADERS, json=payload)
+    for attempt in range(5):
+        response = requests.post(SD_API_URL, headers=HEADERS, json=payload)
 
-        # Model yükleniyorsa bekle ve tekrar dene
-        if response.status_code == 503:
-            time.sleep(3)
+        # Model yükleniyorsa veya yoğunluk varsa bekle
+        if response.status_code in (503, 504):
+            time.sleep(5)
             continue
 
-        # Başarılıysa çeviriyi al
-        if response.status_code == 200:
-            result = response.json()
-            return result[0]["translation_text"]
+        # Rate limit (free quota dolu)
+        if response.status_code == 429:
+            time.sleep(10)
+            continue
 
-    # FALLBACK: çeviri çalışmazsa İngilizce varsay
-    return text
+        # Başarılı
+        if response.status_code == 200:
+            return response.content
+
+    # Hepsi başarısızsa kullanıcıya düzgün hata ver
+    st.error("🚫 Şu an görsel üretim servisi yoğun. Lütfen biraz sonra tekrar dene.")
+    st.stop()
+
 
 
 # =========================
