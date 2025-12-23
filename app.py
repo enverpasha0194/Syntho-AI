@@ -1,86 +1,98 @@
 import streamlit as st
 import requests
+import time
 
 # =========================
-# API AYARLARI
+# API URL'LERİ (YENİ ROUTER)
 # =========================
 SD_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0"
 TR_EN_API_URL = "https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-tr-en"
-
 
 HEADERS = {
     "Authorization": f"Bearer {st.secrets['HF_API_KEY']}"
 }
 
 # =========================
-# TÜRKÇE → İNGİLİZCE ÇEVİRİ
+# 1️⃣ TÜRKÇE → İNGİLİZCE
 # =========================
-import time
-import time
+def translate_tr_to_en(text):
+    payload = {"inputs": text}
 
-def generate_image(prompt):
-    payload = {"inputs": prompt}
+    for _ in range(3):
+        response = requests.post(
+            TR_EN_API_URL,
+            headers=HEADERS,
+            json=payload
+        )
 
-    for attempt in range(5):
-        response = requests.post(SD_API_URL, headers=HEADERS, json=payload)
-
-        # Model yükleniyorsa veya yoğunluk varsa bekle
-        if response.status_code in (503, 504):
-            time.sleep(5)
+        if response.status_code == 503:
+            time.sleep(3)
             continue
 
-        # Rate limit (free quota dolu)
-        if response.status_code == 429:
-            time.sleep(10)
-            continue
-
-        # Başarılı
         if response.status_code == 200:
-            return response.content
+            result = response.json()
+            return result[0]["translation_text"]
 
-    # Hepsi başarısızsa kullanıcıya düzgün hata ver
-    st.error("🚫 Şu an görsel üretim servisi yoğun. Lütfen biraz sonra tekrar dene.")
-    st.stop()
-
-
+    return text  # fallback
 
 # =========================
-# PROMPT MOTORU (Syntho AI ZEKA)
+# 2️⃣ PROMPT MOTORU
 # =========================
 def syntho_prompt(user_prompt_tr):
     prompt_en = translate_tr_to_en(user_prompt_tr)
 
-    base = "ultra realistic photo, high detail, sharp focus, natural lighting"
+    base_prompt = (
+        "ultra realistic photo, high detail, sharp focus, "
+        "natural lighting, realistic textures"
+    )
 
-    final_prompt = f"{base}, {prompt_en}"
+    final_prompt = f"{base_prompt}, {prompt_en}"
     return final_prompt, prompt_en
 
 # =========================
-# GÖRSEL ÜRETİM
+# 3️⃣ GÖRSEL ÜRETİM
 # =========================
 def generate_image(prompt):
     payload = {"inputs": prompt}
-    response = requests.post(SD_API_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()
-    return response.content
+
+    for _ in range(5):
+        response = requests.post(
+            SD_API_URL,
+            headers=HEADERS,
+            json=payload
+        )
+
+        if response.status_code in (503, 504):
+            time.sleep(5)
+            continue
+
+        if response.status_code == 429:
+            time.sleep(10)
+            continue
+
+        if response.status_code == 200:
+            return response.content
+
+    st.error("Servis şu an yoğun, tekrar dene.")
+    st.stop()
 
 # =========================
-# STREAMLIT UI
+# 4️⃣ STREAMLIT UI
 # =========================
 st.set_page_config(page_title="Syntho AI", layout="centered")
-st.title("🧬 Syntho AI — Realistic Image Engine")
-st.caption("Gerçekçiliğin ötesi!")
+st.title("🧬 Syntho AI")
+st.caption("Resim Üretme Aracı!")
 
 user_prompt = st.text_input(
-    "Ne üretelim? (Türkçe yazabilirsin)",
-    placeholder="örnek: gerçekçi balık, sisli dağ, kedi portresi"
+    "Ne üretelim?",
+    placeholder="örnek: gerçekçi balık, sisli dağ, sinematik portre"
 )
 
 if st.button("ÜRET") and user_prompt.strip():
-    with st.spinner("Syntho AI düşünüyor..."):
+    with st.spinner("Syntho AI üretiyor..."):
         final_prompt, translated = syntho_prompt(user_prompt)
-        img_bytes = generate_image(final_prompt)
+        img = generate_image(final_prompt)
 
-        st.image(img_bytes, caption="Üretilen Görsel")
+        st.image(img, caption="Syntho AI çıktısı")
         st.subheader("🔎 Kullanılan İngilizce Prompt")
-        st.code(final_prompt, language="text")
+        st.code(final_prompt)
