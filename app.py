@@ -53,7 +53,12 @@ def syntho_prompt(user_prompt_tr):
 # 3️⃣ GÖRSEL ÜRETİM
 # =========================
 def generate_image(prompt):
-    payload = {"inputs": prompt}
+    payload = {
+    "inputs": prompt,
+    "options": {
+        "wait_for_model": True
+    }
+}
 
     for _ in range(5):
         response = requests.post(
