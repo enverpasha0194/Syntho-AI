@@ -6,6 +6,7 @@ import time
 # API URL'LERİ (YENİ ROUTER)
 # =========================
 SD_API_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-2-1"
+st.write("TOKEN OK:", st.secrets["HF_API_KEY"][:6])
 
 TR_EN_API_URL = "https://router.huggingface.co/hf-inference/models/Helsinki-NLP/opus-mt-tr-en"
 
